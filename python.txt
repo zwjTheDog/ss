@@ -1,0 +1,71 @@
+from scrapy import Request
+from scrapy.spiders import Spider
+from scrapyspider.items import DoubanMovieItem
+
+
+class DoubanMovieTop250Spider(Spider):
+    name = 'douban_movie_top250'
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36',
+    }
+
+    def start_requests(self):
+        url = 'https://movie.douban.com/top250'
+        yield Request(url, headers=self.headers)
+
+    def parse(self, response):
+        item = DoubanMovieItem()
+        movies = response.xpath('//ol[@class="grid_view"]/li')
+        for movie in movies:
+            item['ranking'] = movie.xpath(
+                './/div[@class="pic"]/em/text()').extract()[0]
+            item['movie_name'] = movie.xpath(
+                './/div[@class="hd"]/a/span[1]/text()').extract()[0]
+            item['score'] = movie.xpath(
+                './/div[@class="star"]/span[@class="rating_num"]/text()'
+            ).extract()[0]
+            item['score_num'] = movie.xpath(
+                './/div[@class="star"]/span/text()').re(ur'(\d+)人评价')[0]
+            yield item
+
+        next_url = response.xpath('//span[@class="next"]/a/@href').extract()
+        if next_url:
+            next_url = 'https://movie.douban.com/top250' + next_url[0]       
+            yield Request(next_url, headers=self.headers)
+			
+			
+			
+			
+			
+			
+			
+	实现自动翻页一般有两种方法：
+
+在页面中找到下一页的地址；
+自己根据URL的变化规律构造所有页面地址。		
+			
+			
+			
+fromtutorial.items import DmozItem  
+   
+classDmozSpider(scrapy.Spider):  
+    name = "dmoz"  
+    allowed_domains = ["dmoz.org"]  
+    start_urls =["http://www.dmoz.org/Computers/Programming/Languages/Python/",]  
+   
+    def parse(self, response):  
+        for href inresponse.css("ul.directory.dir-col > li > a::attr('href')"):  
+#获取当前页面的url：respone.url  
+#通过拼接response.url和href.extract()，将相对网址转换为绝对网址  
+            url =response.urljoin(response.url, href.extract())  
+            yield scrapy.Request(url, callback=self.parse_dir_contents)  
+   
+         #负责子页面内容的爬取  
+    def parse_dir_contents(self, response):  
+        for sel in response.xpath('//ul/li'):  
+            item = DmozItem()  
+            item['title'] =sel.xpath('a/text()').extract()  
+            item['link'] = sel.xpath('a/@href').extract()  
+            item['desc'] =sel.xpath('text()').extract()  
+            yield item  			
+			
